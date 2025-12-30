@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vuln:vuln@postgres:5432/vulndb
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - NVD_API_KEY=${NVD_API_KEY:-}
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - vuln-network
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=/api/v1
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - vuln-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=vuln
+      - POSTGRES_PASSWORD=vuln
+      - POSTGRES_DB=vulndb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vuln -d vulndb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vuln-network
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - vuln-network
+
+  celery-worker:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    command: celery -A app.core.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vuln:vuln@postgres:5432/vulndb
+      - REDIS_URL=redis://redis:6379/0
+      - NVD_API_KEY=${NVD_API_KEY:-}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - vuln-network
+
+  celery-beat:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    command: celery -A app.core.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vuln:vuln@postgres:5432/vulndb
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - vuln-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  vuln-network:
+    driver: bridge

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  CORS_ORIGINS: "http://frontend:3000"
+  EPSS_API_URL: "https://api.first.org/data/v1/epss"
+  KEV_FEED_URL: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
