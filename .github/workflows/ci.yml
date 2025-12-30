@@ -57,7 +57,7 @@ jobs:
           pytest tests/ -v --cov=app --cov-report=xml || echo "No tests yet"
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           file: src/backend/coverage.xml
           flags: backend
