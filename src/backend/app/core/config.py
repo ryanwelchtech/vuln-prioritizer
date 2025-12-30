@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     SECRET_KEY: str = "change-me-in-production-use-strong-secret"
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://vulndb:vulndb@localhost:5432/vulndb"
+    # Database (SQLite for dev, PostgreSQL for production)
+    DATABASE_URL: str = "sqlite+aiosqlite:///./vuln.db"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
